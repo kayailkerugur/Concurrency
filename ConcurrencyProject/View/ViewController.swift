@@ -10,6 +10,15 @@ import Alamofire
 
 class ViewController: UIViewController {
     
+    let array: [CFTimeInterval] = [
+        1,
+        3,
+        5,
+        7,
+        2,
+        7
+    ]
+    
     @IBOutlet weak var currentValue: UIBarButtonItem!
     
     @IBOutlet weak var tableView: UITableView!
@@ -28,6 +37,8 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        getData()
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -48,18 +59,23 @@ class ViewController: UIViewController {
             whichType(qos: .userInteractive)
             self.tableView.reloadData()
         }else if result == "userInitiaded" {
+
             whichType(qos: .userInitiated)
             self.tableView.reloadData()
         }else if result == "default" {
+
             whichType(qos: .default)
             self.tableView.reloadData()
         }else if result == "utility" {
+
             whichType(qos: .utility)
             self.tableView.reloadData()
         }else if result == "background" {
+
             whichType(qos: .background)
             self.tableView.reloadData()
         }else if result == "unspecified" {
+
             whichType(qos: .unspecified)
             self.tableView.reloadData()
         }
@@ -74,7 +90,6 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "table", for: indexPath) as! TableViewCell
         let data = post[indexPath.row]
-        cell.title.text = data.title
         if result == "userInteractive" {
             fetchPhotoControl(qos: .userInteractive, cell: cell, data: data)
         }else if result == "userInitiaded" {
@@ -121,7 +136,7 @@ extension ViewController: UIPickerViewDelegate, UIPickerViewDataSource {
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         if pickerView == pickerView1 {
             result = source[row]
-            currentValue.title = source[row]
+            currentValue.title = result
         } else if pickerView == pickerView2{
             result2 = source2[row]
         }
@@ -160,25 +175,28 @@ extension ViewController {
             let privateSerialQueue = DispatchQueue(label: "concurrency.privateSerialQueueUtility", qos: qos)
             privateSerialQueue.async {
                 let images = try? Data(contentsOf: URL(string:data.url)!)
-                cell.img.image = UIImage(data: images!)
                 DispatchQueue.main.async {
+                    cell.img.image = UIImage(data: images!)
+                    cell.title.text = data.title
                 }
             }
         } else if result2 == "Global" {
             let globalQueue = DispatchQueue.global(qos: qos.qosClass)
             globalQueue.async {
                 let images = try? Data(contentsOf: URL(string:data.url)!)
-                cell.img.image = UIImage(data: images!)
                 DispatchQueue.main.async {
-                    
+                    cell.img.image = UIImage(data: images!)
+                    cell.title.text = data.title
                 }
             }
         } else if result2 == "Eşzamanlı_kuyruk" {
             let privateConcurrentQueue = DispatchQueue(label: "concurrency.privateConcurrencyQueueUtility",qos: qos, attributes: .concurrent)
             privateConcurrentQueue.async {
                 let images = try? Data(contentsOf: URL(string:data.url)!)
-                cell.img.image = UIImage(data: images!)
+                
                 DispatchQueue.main.async {
+                    cell.img.image = UIImage(data: images!)
+                    cell.title.text = data.title
                 }
             }
         }
@@ -187,5 +205,22 @@ extension ViewController {
     func getXIB(){
         let nib = UINib(nibName: "TableViewCell", bundle: nil)
         self.tableView.register(nib, forCellReuseIdentifier: "table")
+    }
+    
+    func getData(){
+        let group = DispatchGroup()
+        
+        for number in array {
+            group.enter()
+            print("Entering group with number: \(number)")
+            DispatchQueue.global().asyncAfter(deadline: .now() + number, execute:  {
+                group.leave()
+                print("leaving group for \(number)")
+            })
+        }
+        
+        group.notify(queue: .main) {
+            print("Done with all operations")
+        }
     }
 }
